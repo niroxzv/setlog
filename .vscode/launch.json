@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter (Android emulator)",
+      "request": "launch",
+      "type": "dart",
+      // The AVD id, not the running device id. "emulator-5554" only exists
+      // once the emulator has already booted, so it fails with
+      // 'Device "emulator-5554" was not found'. Using the AVD id lets the
+      // Flutter extension start the emulator itself if it isn't running.
+      "deviceId": "MBAP_Pixel_10_API_36.1"
+    },
+    {
+      "name": "Flutter (Chrome, port 5000)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "chrome",
+      "args": [
+        "--web-port",
+        "5000"
+      ]
+    }
+  ]
+}

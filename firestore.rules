@@ -1,0 +1,68 @@
+rules_version = '2';
+
+// Security rules for SetLog.
+//
+// Paste these into Firebase console → Firestore Database → Rules → Publish.
+// They are kept in the repo so the rules the app needs are reviewable
+// alongside the queries that depend on them.
+//
+// Reads are allowed to any signed-in user; writes are restricted to the
+// document's owner. Reads are deliberately not ownership-scoped because
+// Firestore evaluates rules against a *query*, not against the documents it
+// would return: it rejects any query it cannot prove will only match
+// permitted documents. Two of this app's queries have no user_id filter —
+//
+//   watchSetsForSession()  filters on session_id only
+//   watchExercises()       reads the shared exercise catalogue
+//
+// — so an ownership-scoped read rule would reject both outright, regardless
+// of who owned the data. Tightening reads would mean adding a user_id filter
+// to those queries and a matching composite index for each.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // The document being written belongs to the caller.
+    function ownsIncoming() {
+      return signedIn() && request.auth.uid == request.resource.data.user_id;
+    }
+
+    // The document already stored belongs to the caller.
+    function ownsExisting() {
+      return signedIn() && request.auth.uid == resource.data.user_id;
+    }
+
+    // Workout sessions.
+    match /sessions/{sessionId} {
+      allow read: if signedIn();
+      allow create: if ownsIncoming();
+      allow update, delete: if ownsExisting();
+    }
+
+    // Logged sets — a top-level collection, not a subcollection, so that one
+    // exercise can be queried across every session for the PB history.
+    match /sets/{setId} {
+      allow read: if signedIn();
+      allow create: if ownsIncoming();
+      allow update, delete: if ownsExisting();
+    }
+
+    // Exercise catalogue.
+    //
+    // Every exercise carries a user_id — the seeder stamps the signed-in uid
+    // on each row it writes, and custom exercises added from the Library get
+    // the same. So both create and delete are owner-checked here, and the
+    // Library filters the stream to the caller's own rows client-side.
+    match /exercises/{exerciseId} {
+      allow read: if signedIn();
+      allow create: if ownsIncoming();
+      allow update, delete: if ownsExisting();
+    }
+
+    // Anything not matched above is denied.
+  }
+}

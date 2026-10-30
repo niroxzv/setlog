@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "867490997221",
+    "project_id": "mbapprojectest1",
+    "storage_bucket": "mbapprojectest1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:867490997221:android:10907395d82400e6a7850c",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_mbapproject"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClpXLS_EsCcshV_ayKFTJoOLMs4QHjf_o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
