@@ -191,10 +191,12 @@ class FirestoreService {
   // [CRUD: Delete]
   // Removes the session and every set inside it. A WriteBatch makes this
   // atomic — either all of it is deleted or none of it is.
-  Future<void> deleteSession(String sessionId) async {
+  Future<void> deleteSession(String userId, String sessionId) async {
     try {
-      final QuerySnapshot<Map<String, dynamic>> childSets =
-          await _sets.where('session_id', isEqualTo: sessionId).get();
+      final QuerySnapshot<Map<String, dynamic>> childSets = await _sets
+          .where('user_id', isEqualTo: userId)
+          .where('session_id', isEqualTo: sessionId)
+          .get();
 
       final WriteBatch batch = _db.batch();
       for (final QueryDocumentSnapshot<Map<String, dynamic>> doc
@@ -213,12 +215,18 @@ class FirestoreService {
   // ────────────────────────────────────────────────────────────────
 
   // [CRUD: Select all] — every set belonging to one session, in order.
-  Stream<List<LoggedSet>> watchSetsForSession(String sessionId) {
+  //
+  // Filters on user_id too, because the security rules only let a user read
+  // their own sets and Firestore rejects any query that could return someone
+  // else's. Sorted in Dart so two equality filters need no composite index.
+  Stream<List<LoggedSet>> watchSetsForSession(String userId, String sessionId) {
     return _sets
+        .where('user_id', isEqualTo: userId)
         .where('session_id', isEqualTo: sessionId)
-        .orderBy('set_number')
         .snapshots()
-        .map(_toSetList);
+        .map((QuerySnapshot<Map<String, dynamic>> s) => _toSetList(s)
+          ..sort((LoggedSet a, LoggedSet b) =>
+              a.setNumber.compareTo(b.setNumber)));
   }
 
   // [QUERY-3 variant] — all sets of one exercise for one user, heaviest
@@ -301,9 +309,9 @@ class FirestoreService {
   // [CRUD: Select all] — the exercise library.
   Stream<List<Exercise>> watchExercises(String userId) {
     return _exercises
-        .orderBy('name')
+        .where('user_id', isEqualTo: userId)
         .snapshots()
-        .map((QuerySnapshot<Map<String, dynamic>> s) => _mine(s, userId));
+        .map(_byName);
   }
 
   // [QUERY-1 variant] — library filtered to one muscle group.
@@ -312,28 +320,23 @@ class FirestoreService {
     String userId,
   ) {
     return _exercises
+        .where('user_id', isEqualTo: userId)
         .where('exercise_category', isEqualTo: category)
-        .orderBy('name')
         .snapshots()
-        .map((QuerySnapshot<Map<String, dynamic>> s) => _mine(s, userId));
+        .map(_byName);
   }
 
-  // Keeps only this account's exercises.
-  //
-  // Done in Dart rather than as a third `where` because adding user_id to
-  // these queries would need two more composite indexes — user_id + name, and
-  // user_id + exercise_category + name — for a collection of a few dozen rows.
-  // The same trade-off is made in watchAllSets.
-  //
-  // Without this the Library showed every account's exercises while "Clear
-  // data" only ever removed the signed-in user's, so anything seeded under a
-  // different uid stayed on screen and looked like a duplicate.
-  List<Exercise> _mine(QuerySnapshot<Map<String, dynamic>> s, String userId) {
+  // The exercise queries filter on user_id in Firestore, because the security
+  // rules only let a user read their own exercises and Firestore rejects any
+  // query that could return someone else's. Sorting by name happens here in
+  // Dart, so equality-only filters need no composite index — the same
+  // trade-off is made in watchAllSets.
+  List<Exercise> _byName(QuerySnapshot<Map<String, dynamic>> s) {
     return s.docs
         .map((QueryDocumentSnapshot<Map<String, dynamic>> d) =>
             Exercise.fromDoc(d))
-        .where((Exercise e) => e.userId == userId)
-        .toList();
+        .toList()
+      ..sort((Exercise a, Exercise b) => a.name.compareTo(b.name));
   }
 
   // [CRUD: Insert] — the proposal's "users create their own exercises".

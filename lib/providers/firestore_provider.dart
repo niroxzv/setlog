@@ -89,7 +89,11 @@ final StreamProvider<WorkoutSession?> activeSessionProvider =
 // Sets belonging to one session. `.family` lets the screen pass the id in.
 final StreamProviderFamily<List<LoggedSet>, String> sessionSetsProvider =
     StreamProvider.family<List<LoggedSet>, String>((Ref ref, String sessionId) {
-  return ref.watch(firestoreServiceProvider).watchSetsForSession(sessionId);
+  final String? uid = ref.watch(currentUserIdProvider);
+  if (uid == null) return Stream<List<LoggedSet>>.value(const <LoggedSet>[]);
+  return ref
+      .watch(firestoreServiceProvider)
+      .watchSetsForSession(uid, sessionId);
 });
 
 // One session's full record, for the detail screen (Select one).
@@ -269,8 +273,12 @@ class WorkoutController extends AsyncNotifier<void> {
 
   // Delete — session plus all of its sets.
   Future<void> deleteSession(String sessionId) async {
+    final String? uid = _uid;
+    if (uid == null) return;
+
     state = const AsyncLoading<void>();
-    state = await AsyncValue.guard(() => _service.deleteSession(sessionId));
+    state =
+        await AsyncValue.guard(() => _service.deleteSession(uid, sessionId));
   }
 
   // Insert — log one set into the current session.
