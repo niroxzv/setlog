@@ -1,6 +1,6 @@
 # SetLog
 
-A Flutter workout tracker built for my Mobile App Development module at Temasek Polytechnic.
+A Flutter workout tracker built for my Mobile App Development module at Temasek Polytechnic(Runs primarily on android only).
 
 ## Features
 - **Sign-in:** Firebase Auth with email and password, Google Sign-In, email verification and password reset
